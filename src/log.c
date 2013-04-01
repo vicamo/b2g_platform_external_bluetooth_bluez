@@ -27,7 +27,14 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <syslog.h>
+
+#ifdef ANDROID
+#  define LOG_TAG "bluetoothd"
+#  include <cutils/log.h>
+#else
+#  define USE_SYSLOG 1
+#  include <syslog.h>
+#endif
 
 #include <glib.h>
 
@@ -39,7 +46,11 @@ void info(const char *format, ...)
 
 	va_start(ap, format);
 
+#ifdef ANDROID
+	LOG_PRI_VA(ANDROID_LOG_INFO, LOG_TAG, format, ap);
+#elif defined(USE_SYSLOG)
 	vsyslog(LOG_INFO, format, ap);
+#endif
 
 	va_end(ap);
 }
@@ -50,7 +61,11 @@ void error(const char *format, ...)
 
 	va_start(ap, format);
 
+#ifdef ANDROID
+	LOG_PRI_VA(ANDROID_LOG_ERROR, LOG_TAG, format, ap);
+#elif defined(USE_SYSLOG)
 	vsyslog(LOG_ERR, format, ap);
+#endif
 
 	va_end(ap);
 }
@@ -61,7 +76,11 @@ void btd_debug(const char *format, ...)
 
 	va_start(ap, format);
 
+#ifdef ANDROID
+	LOG_PRI_VA(ANDROID_LOG_DEBUG, LOG_TAG, format, ap);
+#elif defined(USE_SYSLOG)
 	vsyslog(LOG_DEBUG, format, ap);
+#endif
 
 	va_end(ap);
 }
@@ -96,9 +115,12 @@ void __btd_toggle_debug(void)
 
 void __btd_log_init(const char *debug, int detach)
 {
+#ifdef USE_SYSLOG
 	int option = LOG_NDELAY | LOG_PID;
+#endif
 	struct btd_debug_desc *desc;
 
+	SLOGD("__btd_log_init: debug=%s", debug);
 	if (debug != NULL)
 		enabled = g_strsplit_set(debug, ":, ", 0);
 
@@ -106,17 +128,21 @@ void __btd_log_init(const char *debug, int detach)
 		if (is_enabled(desc))
 			desc->flags |= BTD_DEBUG_FLAG_PRINT;
 
+#ifdef USE_SYSLOG
 	if (!detach)
 		option |= LOG_PERROR;
 
 	openlog("bluetoothd", option, LOG_DAEMON);
 
 	syslog(LOG_INFO, "Bluetooth deamon %s", VERSION);
+#endif
 }
 
 void __btd_log_cleanup(void)
 {
+#ifdef USE_SYSLOG
 	closelog();
+#endif
 
 	g_strfreev(enabled);
 }

@@ -42,6 +42,7 @@ LOCAL_SHARED_LIBRARIES := \
 	libbluetoothd \
 	libbtio \
 	libdbus \
+	liblog \
 	libglib
 
 
